@@ -190,6 +190,15 @@ vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right win
 vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
 vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
 
+-- Center the line vertically in the window
+local function center_line()
+  vim.cmd 'normal! zz'
+end
+
+-- Map <C-d> and <C-u> to center the line
+vim.keymap.set('n', '<C-d>', '<C-d>zz', { noremap = true, silent = true, desc = 'Move [D]own half screen and center' })
+vim.keymap.set('n', '<C-u>', '<C-u>zz', { noremap = true, silent = true, desc = 'Move [U]p half screen and center' })
+
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
 
@@ -255,6 +264,63 @@ require('lazy').setup({
         topdelete = { text = '‾' },
         changedelete = { text = '~' },
       },
+      current_line_blame = true,
+      on_attach = function(bufnr)
+        local gs = package.loaded.gitsigns
+
+        local function map(mode, l, r, opts)
+          opts = opts or {}
+          opts.buffer = bufnr
+          vim.keymap.set(mode, l, r, opts)
+        end
+
+        -- Navigation
+        map('n', ']c', function()
+          if vim.wo.diff then
+            return ']c'
+          end
+          vim.schedule(function()
+            gs.next_hunk()
+          end)
+          return '<Ignore>'
+        end, { expr = true, desc = 'Gitsigns: Jump to next hunk' })
+
+        map('n', '[c', function()
+          if vim.wo.diff then
+            return '[c'
+          end
+          vim.schedule(function()
+            gs.prev_hunk()
+          end)
+          return '<Ignore>'
+        end, { expr = true, desc = 'Gitsigns: Jump to previous hunk' })
+
+        -- Actions
+        map('n', '<leader>hs', gs.stage_hunk, { desc = 'Gitsigns: Stage current hunk' })
+        map('n', '<leader>hr', gs.reset_hunk, { desc = 'Gitsigns: Reset current hunk' })
+        map('v', '<leader>hs', function()
+          gs.stage_hunk { vim.fn.line '.', vim.fn.line 'v' }
+        end, { desc = 'Gitsigns: Stage visual selection' })
+        map('v', '<leader>hr', function()
+          gs.reset_hunk { vim.fn.line '.', vim.fn.line 'v' }
+        end, { desc = 'Gitsigns: Reset visual selection' })
+        map('n', '<leader>hS', gs.stage_buffer, { desc = 'Gitsigns: Stage all changes' })
+        map('n', '<leader>hu', gs.undo_stage_hunk, { desc = 'Gitsigns: Undo stage current hunk' })
+        map('n', '<leader>hR', gs.reset_buffer, { desc = 'Gitsigns: Reset buffer' })
+        map('n', '<leader>hp', gs.preview_hunk, { desc = 'Gitsigns: Preview hunk' })
+        map('n', '<leader>hb', function()
+          gs.blame_line { full = true }
+        end, { desc = 'Gitsigns: Blame line' })
+        map('n', '<leader>tb', gs.toggle_current_line_blame, { desc = 'Gitsigns: Toggle current line blame' })
+        map('n', '<leader>hd', gs.diffthis, { desc = 'Gitsigns: Diff current hunk' })
+        map('n', '<leader>hD', function()
+          gs.diffthis '~'
+        end, { desc = 'Gitsigns: Diff current hunk against base' })
+        map('n', '<leader>td', gs.toggle_deleted, { desc = 'Gitsigns: Toggle deleted' })
+
+        -- Text object
+        map({ 'o', 'x' }, 'ih', ':<C-U>Gitsigns select_hunk<CR>', { desc = 'Gitsigns: Select hunk' })
+      end,
     },
   },
 
@@ -286,6 +352,7 @@ require('lazy').setup({
         ['<leader>r'] = { name = '[R]ename', _ = 'which_key_ignore' },
         ['<leader>s'] = { name = '[S]earch', _ = 'which_key_ignore' },
         ['<leader>w'] = { name = '[W]orkspace', _ = 'which_key_ignore' },
+        ['<leader>h'] = { name = 'Git([H]ub)signs', _ = 'which_key_ignore' },
       }
     end,
   },
@@ -317,10 +384,8 @@ require('lazy').setup({
         end,
       },
       { 'nvim-telescope/telescope-ui-select.nvim' },
-
       -- Useful for getting pretty icons, but requires a Nerd Font.
       { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
-      { 'github/copilot.vim' },
     },
     config = function()
       -- Telescope is a fuzzy finder that comes with a lot of different things that
@@ -369,13 +434,18 @@ require('lazy').setup({
       local builtin = require 'telescope.builtin'
       vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
       vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
-      vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
+      vim.keymap.set('n', '<leader>sf', function()
+        builtin.find_files { find_command = { 'rg', '--files', '--iglob', '!.git', '--hidden' } }
+      end, { desc = '[S]earch [F]iles' })
       vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
       vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
       vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
       vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
+      vim.keymap.set('n', '<leader>sa', function()
+        builtin.find_files { find_command = { 'rg', '--files', '-g', '*' } }
+      end, { desc = '[S]earch [A]ll Files (Inc. hidden and .gitignore' })
       vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
 
       -- Slightly advanced example of overriding default behavior and theme
@@ -402,7 +472,24 @@ require('lazy').setup({
       end, { desc = '[S]earch [N]eovim files' })
     end,
   },
-
+  { 'github/copilot.vim' },
+  { 'nvim-lua/plenary.nvim' },
+  {
+    'CopilotC-Nvim/CopilotChat.nvim',
+    branch = 'canary',
+    opts = {
+      debug = true, -- Enable debugging
+      -- See Configuration section for rest
+    },
+    config = function()
+      require('CopilotChat').setup {
+        -- Your configuration goes here
+      }
+      vim.cmd [[command Explain CopilotChatExplain]]
+      vim.cmd [[command Chat CopilotChat]]
+    end,
+    -- See Commands section for default commands if you want to lazy load on them
+  },
   { -- LSP Configuration & Plugins
     'neovim/nvim-lspconfig',
     dependencies = {
@@ -747,6 +834,7 @@ require('lazy').setup({
         -- leave this setup function empty for default config
         -- or refer to the configuration section
         -- for configuration options
+        dark_variant = 'moon',
       }
     end,
 
