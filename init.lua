@@ -323,6 +323,12 @@ require('lazy').setup({
       end,
     },
   },
+  {
+    'tpope/vim-fugitive',
+    config = function()
+      vim.cmd [[command Ga Git add -p]]
+    end,
+  },
 
   -- NOTE: Plugins can also be configured to run lua code when they are loaded.
   --
@@ -694,7 +700,12 @@ require('lazy').setup({
       }
     end,
   },
-
+  {
+    'mbbill/undotree',
+    config = function()
+      vim.keymap.set('n', '<leader>u', vim.cmd.UndotreeToggle, { desc = 'Toggle [U]ndo Tree' })
+    end,
+  },
   { -- Autoformat
     'stevearc/conform.nvim',
     opts = {
@@ -906,6 +917,10 @@ require('lazy').setup({
       --    - Show your current context: https://github.com/nvim-treesitter/nvim-treesitter-context
       --    - Treesitter + textobjects: https://github.com/nvim-treesitter/nvim-treesitter-textobjects
     end,
+  },
+  {
+    'nvim-treesitter/nvim-treesitter-context',
+    after = 'nvim-treesitter',
   },
 
   -- The following two comments only work if you have downloaded the kickstart repo, not just copy pasted the
