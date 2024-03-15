@@ -29,7 +29,7 @@ What is Kickstart?
     what your configuration is doing, and modify it to suit your needs.
 
     Once you've done that, you can start exploring, configuring and tinkering to
-    make Neovim your own! That might mean leaving kickstart just the way it is for a while
+   make Neovim your own! That might mean leaving kickstart just the way it is for a while
     or immediately breaking it into modular pieces. It's up to you!
 
     If you don't know anything about Lua, I recommend taking some time to read through
@@ -89,6 +89,9 @@ P.S. You can delete this when you're done too. It's your config now! :)
 --  NOTE: Must happen before plugins are loaded (otherwise wrong leader will be used)
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
+
+vim.g.loaded_netrw = 1
+vim.g.loaded_netrwPlugin = 1
 
 -- Set to true if you have a Nerd Font installed
 vim.g.have_nerd_font = true
@@ -311,12 +314,10 @@ require('lazy').setup({
         map('n', '<leader>hb', function()
           gs.blame_line { full = true }
         end, { desc = 'Gitsigns: Blame line' })
-        map('n', '<leader>tb', gs.toggle_current_line_blame, { desc = 'Gitsigns: Toggle current line blame' })
         map('n', '<leader>hd', gs.diffthis, { desc = 'Gitsigns: Diff current hunk' })
         map('n', '<leader>hD', function()
           gs.diffthis '~'
         end, { desc = 'Gitsigns: Diff current hunk against base' })
-        map('n', '<leader>td', gs.toggle_deleted, { desc = 'Gitsigns: Toggle deleted' })
 
         -- Text object
         map({ 'o', 'x' }, 'ih', ':<C-U>Gitsigns select_hunk<CR>', { desc = 'Gitsigns: Select hunk' })
@@ -329,8 +330,18 @@ require('lazy').setup({
       vim.cmd [[command Ga Git add -p]]
     end,
   },
-
-  -- NOTE: Plugins can also be configured to run lua code when they are loaded.
+  {
+    'nvim-tree/nvim-tree.lua',
+    version = '*',
+    lazy = false,
+    dependencies = {
+      'nvim-tree/nvim-web-devicons',
+    },
+    config = function()
+      require('nvim-tree').setup {}
+      vim.keymap.set('n', '<leader>t', '<cmd>NvimTreeToggle<CR>', { desc = 'Toggle Nvim [T]ree' })
+    end,
+  },
   --
   -- This is often very useful to both group configuration, as well as handle
   -- lazy loading plugins that don't need to be loaded immediately at startup.
