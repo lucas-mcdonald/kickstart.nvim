@@ -145,6 +145,14 @@ vim.opt.splitbelow = true
 vim.opt.list = true
 vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
 
+-- Set tabstop, softtabstop, and shiftwidth to 4
+vim.opt.tabstop = 4
+vim.opt.softtabstop = 4
+vim.opt.shiftwidth = 4
+
+-- Use spaces instead of tabs
+vim.opt.expandtab = true
+
 -- Preview substitutions live, as you type!
 vim.opt.inccommand = 'split'
 
@@ -178,21 +186,14 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 -- or just use <C-\><C-n> to exit terminal mode
 vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
+vim.keymap.set('v', 'p', '"_dP', { noremap = true, silent = true, desc = '[P]ut without replacing the Put buffer' })
 -- TIP: Disable arrow keys in normal mode
 -- vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
 -- vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
 -- vim.keymap.set('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
 -- vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
 
--- Keybinds to make split navigation easier.
---  Use CTRL+<hjkl> to switch between windows
 --
---  See `:help wincmd` for a list of all window commands
-vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
-vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
-vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
-vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
-
 -- Center the line vertically in the window
 local function center_line()
   vim.cmd 'normal! zz'
@@ -201,6 +202,10 @@ end
 -- Map <C-d> and <C-u> to center the line
 vim.keymap.set('n', '<C-d>', '<C-d>zz', { noremap = true, silent = true, desc = 'Move [D]own half screen and center' })
 vim.keymap.set('n', '<C-u>', '<C-u>zz', { noremap = true, silent = true, desc = 'Move [U]p half screen and center' })
+
+-- Navigate buffers
+vim.keymap.set('n', '<C-a', ':bp<CR>', { noremap = true, silent = true, desc = 'Go to previous buffer' })
+vim.keymap.set('n', '<C-s', ':bn<CR>', { noremap = true, silent = true, desc = 'Go to next buffer' })
 
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
@@ -340,6 +345,45 @@ require('lazy').setup({
     config = function()
       require('nvim-tree').setup {}
       vim.keymap.set('n', '<leader>t', '<cmd>NvimTreeToggle<CR>', { desc = 'Toggle Nvim [T]ree' })
+    end,
+  },
+  {
+    'ThePrimeagen/harpoon',
+    branch = 'harpoon2',
+    dependencies = { 'nvim-lua/plenary.nvim' },
+    config = function()
+      local harpoon = require 'harpoon'
+
+      -- REQUIRED
+      harpoon:setup()
+      -- REQUIRED
+
+      vim.keymap.set('n', '<leader>a', function()
+        harpoon:list():append()
+      end, { desc = 'Add current file to Harpoon' })
+      vim.keymap.set('n', '<C-g>', function()
+        harpoon.ui:toggle_quick_menu(harpoon:list())
+      end)
+      vim.keymap.set('n', '<C-h>', function()
+        harpoon:list():select(1)
+      end, { desc = 'Select Harpoon List Idx 1' })
+      vim.keymap.set('n', '<C-j>', function()
+        harpoon:list():select(2)
+      end, { desc = 'Select Harpoon List Idx 2' })
+      vim.keymap.set('n', '<C-k>', function()
+        harpoon:list():select(3)
+      end, { desc = 'Select Harpoon List Idx 3' })
+      vim.keymap.set('n', '<C-l>', function()
+        harpoon:list():select(4)
+      end, { desc = 'Select Harpoon List Idx 4' })
+
+      -- Toggle previous & next buffers stored within Harpoon list
+      vim.keymap.set('n', '<C-p>', function()
+        harpoon:list():prev()
+      end)
+      vim.keymap.set('n', '<C-n>', function()
+        harpoon:list():next()
+      end)
     end,
   },
   --
@@ -651,6 +695,7 @@ require('lazy').setup({
         --
         -- But for many setups, the LSP (`tsserver`) will work just fine
         tsserver = {},
+        terraformls = {},
         --
 
         lua_ls = {
@@ -721,10 +766,6 @@ require('lazy').setup({
     'stevearc/conform.nvim',
     opts = {
       notify_on_error = false,
-      format_on_save = {
-        timeout_ms = 500,
-        lsp_fallback = true,
-      },
       formatters_by_ft = {
         lua = { 'stylua' },
         -- Conform can also run multiple formatters sequentially
@@ -856,7 +897,7 @@ require('lazy').setup({
         -- leave this setup function empty for default config
         -- or refer to the configuration section
         -- for configuration options
-        dark_variant = 'moon',
+        -- variant = 'dawn'
       }
     end,
 
