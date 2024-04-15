@@ -186,12 +186,30 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 -- or just use <C-\><C-n> to exit terminal mode
 vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
+vim.api.nvim_exec([[
+  augroup TerminalAutoClose
+    autocmd!
+    autocmd TermClose * if &buftype ==# 'terminal' && ! &hidden | q | endif
+  augroup END
+]], true)
+
+vim.api.nvim_exec([[
+  augroup TerminalSettings
+    autocmd!
+    autocmd BufEnter term://* setlocal nonumber
+    autocmd BufLeave term://* setlocal number
+  augroup END
+]], false)
+
+vim.keymap.set('n', '<leader>t', '<cmd>:split term://$SHELL<CR><c-w>12-i', { desc = 'Open a new [T]erminal' })
+vim.keymap.set('t', '<leader>t', '<cmd>:split term://$SHELL<CR>i', { desc = 'Open a new [T]erminal' })
+
 vim.keymap.set('v', 'p', '"_dP', { noremap = true, silent = true, desc = '[P]ut without replacing the Put buffer' })
 -- TIP: Disable arrow keys in normal mode
--- vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
--- vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
--- vim.keymap.set('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
--- vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
+vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
+vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
+vim.keymap.set('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
+vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
 
 --
 -- Center the line vertically in the window
@@ -244,6 +262,7 @@ vim.opt.rtp:prepend(lazypath)
 require('lazy').setup({
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
   'tpope/vim-sleuth', -- Detect tabstop and shiftwidth automatically
+  'tpope/vim-abolish', -- Easily search for, substitute, and abbreviate multiple variants of a word
 
   -- NOTE: Plugins can also be added by using a table,
   -- with the first argument being the link and the following
@@ -343,8 +362,12 @@ require('lazy').setup({
       'nvim-tree/nvim-web-devicons',
     },
     config = function()
-      require('nvim-tree').setup {}
-      vim.keymap.set('n', '<leader>t', '<cmd>NvimTreeToggle<CR>', { desc = 'Toggle Nvim [T]ree' })
+      require('nvim-tree').setup {
+        view = {
+          side = 'right',
+        }
+      }
+      vim.keymap.set('n', '<leader>f', '<cmd>NvimTreeToggle<CR>', { desc = 'Toggle Nvim [F]ile Tree' })
     end,
   },
   {
@@ -534,7 +557,6 @@ require('lazy').setup({
     end,
   },
   { 'github/copilot.vim' },
-  { 'nvim-lua/plenary.nvim' },
   {
     'CopilotC-Nvim/CopilotChat.nvim',
     branch = 'canary',
@@ -551,6 +573,86 @@ require('lazy').setup({
     end,
     -- See Commands section for default commands if you want to lazy load on them
   },
+  {
+    'mfussenegger/nvim-jdtls',
+    dependencies = {
+      'mfussenegger/nvim-dap',
+      dependencies = {
+        -- Creates a beautiful debugger UI
+        { 'rcarriga/nvim-dap-ui', dependencies = { 'nvim-neotest/nvim-nio' } },
+
+        -- Installs the debug adapters for you
+        'williamboman/mason.nvim',
+        'jay-babu/mason-nvim-dap.nvim',
+
+        -- Add your own debuggers here
+        'leoluz/nvim-dap-go',
+      },
+      config = function()
+        local dap = require 'dap'
+        local dapui = require 'dapui'
+
+        require('mason-nvim-dap').setup {
+          -- Makes a best effort to setup the various debuggers with
+          -- reasonable debug configurations
+          automatic_setup = true,
+
+          -- You can provide additional configuration to the handlers,
+          -- see mason-nvim-dap README for more information
+          handlers = {},
+
+          -- You'll need to check that you have the required things installed
+          -- online, please don't ask me how to install them :)
+          ensure_installed = {
+            -- Update this to ensure that you have the debuggers for the langs you want
+            'delve',
+          },
+        }
+
+        -- Basic debugging keymaps, feel free to change to your liking!
+        vim.keymap.set('n', '<F5>', dap.continue, { desc = 'Debug: Start/Continue' })
+        vim.keymap.set('n', '<F1>', dap.step_into, { desc = 'Debug: Step Into' })
+        vim.keymap.set('n', '<F2>', dap.step_over, { desc = 'Debug: Step Over' })
+        vim.keymap.set('n', '<F3>', dap.step_out, { desc = 'Debug: Step Out' })
+        vim.keymap.set('n', '<leader>b', dap.toggle_breakpoint, { desc = 'Debug: Toggle Breakpoint' })
+        vim.keymap.set('n', '<leader>B', function()
+          dap.set_breakpoint(vim.fn.input 'Breakpoint condition: ')
+        end, { desc = 'Debug: Set Breakpoint' })
+
+        -- Dap UI setup
+        -- For more information, see |:help nvim-dap-ui|
+        dapui.setup {
+          -- Set icons to characters that are more likely to work in every terminal.
+          --    Feel free to remove or use ones that you like more! :)
+          --    Don't feel like these are good choices.
+          icons = { expanded = '▾', collapsed = '▸', current_frame = '*' },
+          controls = {
+            icons = {
+              pause = '⏸',
+              play = '▶',
+              step_into = '⏎',
+              step_over = '⏭',
+              step_out = '⏮',
+              step_back = 'b',
+              run_last = '▶▶',
+              terminate = '⏹',
+              disconnect = '⏏',
+            },
+          },
+        }
+
+        -- Toggle to see last session result. Without this, you can't see session output in case of unhandled exception.
+        vim.keymap.set('n', '<F7>', dapui.toggle, { desc = 'Debug: See last session result.' })
+
+        dap.listeners.after.event_initialized['dapui_config'] = dapui.open
+        dap.listeners.before.event_terminated['dapui_config'] = dapui.close
+        dap.listeners.before.event_exited['dapui_config'] = dapui.close
+
+        -- Install golang specific config
+        require('dap-go').setup()
+      end,
+    },
+  },
   { -- LSP Configuration & Plugins
     'neovim/nvim-lspconfig',
     dependencies = {
@@ -565,7 +667,7 @@ require('lazy').setup({
     },
     config = function()
       -- Brief Aside: **What is LSP?**
-      --
+
       -- LSP is an acronym you've probably heard, but might not understand what it is.
       --
       -- LSP stands for Language Server Protocol. It's a protocol that helps editors
@@ -641,7 +743,6 @@ require('lazy').setup({
 
           -- Opens a popup that displays documentation about the word under your cursor
           --  See `:help K` for why this keymap
-          map('K', vim.lsp.buf.hover, 'Hover Documentation')
 
           -- WARN: This is not Goto Definition, this is Goto Declaration.
           --  For example, in C this would take you to the header
@@ -757,6 +858,38 @@ require('lazy').setup({
     end,
   },
   {
+    "lewis6991/hover.nvim",
+    config = function()
+        require("hover").setup {
+            init = function()
+                -- Require providers
+                require("hover.providers.lsp")
+                -- require('hover.providers.gh')
+                -- require('hover.providers.gh_user')
+                -- require('hover.providers.jira')
+                -- require('hover.providers.man')
+                -- require('hover.providers.dictionary')
+            end,
+            preview_opts = {
+                border = 'single'
+            },
+            -- Whether the contents of a currently open hover window should be moved
+            -- to a :h preview-window when pressing the hover keymap.
+            preview_window = false,
+            mouse_providers = {
+                'LSP'
+            },
+            mouse_delay = 1000,
+        }
+
+        -- Setup keymaps
+        vim.keymap.set("n", "K", require("hover").hover, {desc = "hover.nvim"})
+        vim.keymap.set("n", "gK", require("hover").hover_select, {desc = "hover.nvim (select)"})
+        vim.keymap.set("n", "<C-p>", function() require("hover").hover_switch("previous", {}) end, {desc = "hover.nvim (previous source)"})
+        vim.keymap.set("n", "<C-n>", function() require("hover").hover_switch("next", {}) end, {desc = "hover.nvim (next source)"})
+    end
+  },
+  {
     'mbbill/undotree',
     config = function()
       vim.keymap.set('n', '<leader>u', vim.cmd.UndotreeToggle, { desc = 'Toggle [U]ndo Tree' })
@@ -802,6 +935,7 @@ require('lazy').setup({
       --  into multiple repos for maintenance purposes.
       'hrsh7th/cmp-nvim-lsp',
       'hrsh7th/cmp-path',
+      'onsails/lspkind.nvim',
 
       -- If you want to add a bunch of pre-configured snippets,
       --    you can use this plugin to help you. It even has snippets
@@ -814,12 +948,22 @@ require('lazy').setup({
       local cmp = require 'cmp'
       local luasnip = require 'luasnip'
       luasnip.config.setup {}
-
+      local lspkind = require 'lspkind'
       cmp.setup {
         snippet = {
           expand = function(args)
             luasnip.lsp_expand(args.body)
           end,
+        },
+        formatting = {
+          format = lspkind.cmp_format({
+            mode = 'symbol_text',
+            maxwidth = 50,
+            ellipsis_char = '...',
+            before = function (_, vim_item)
+              return vim_item
+            end
+          })
         },
         completion = { completeopt = 'menu,menuone,noinsert' },
 
@@ -955,7 +1099,7 @@ require('lazy').setup({
 
       ---@diagnostic disable-next-line: missing-fields
       require('nvim-treesitter.configs').setup {
-        ensure_installed = { 'bash', 'c', 'html', 'lua', 'markdown', 'vim', 'vimdoc' },
+        ensure_installed = { 'bash', 'c', 'html', 'lua', 'markdown', 'vim', 'vimdoc', 'python', 'javascript' },
         -- Autoinstall languages that are not installed
         auto_install = true,
         highlight = { enable = true },
@@ -984,8 +1128,8 @@ require('lazy').setup({
   --  Here are some example plugins that I've included in the kickstart repository.
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
   --
-  -- require 'kickstart.plugins.debug',
-  -- require 'kickstart.plugins.indent_line',
+--  require 'kickstart.plugins.debug',
+  require 'kickstart.plugins.indent_line',
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --    This is the easiest way to modularize your config.
