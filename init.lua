@@ -197,19 +197,23 @@ vim.api.nvim_exec([[
   augroup TerminalSettings
     autocmd!
     autocmd BufEnter term://* setlocal nonumber
-    autocmd BufLeave term://* setlocal number
   augroup END
 ]], false)
 
 vim.keymap.set('n', '<leader>t', '<cmd>:split term://$SHELL<CR><c-w>12-i', { desc = 'Open a new [T]erminal' })
-vim.keymap.set('t', '<leader>t', '<cmd>:split term://$SHELL<CR>i', { desc = 'Open a new [T]erminal' })
 
 vim.keymap.set('v', 'p', '"_dP', { noremap = true, silent = true, desc = '[P]ut without replacing the Put buffer' })
 -- TIP: Disable arrow keys in normal mode
-vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
-vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
-vim.keymap.set('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
-vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
+vim.keymap.set('n', '<left>', '<cmd>echo "hjkl"<CR>')
+vim.keymap.set('n', '<right>', '<cmd>echo "hjkl"<CR>')
+vim.keymap.set('n', '<up>', '<cmd>echo "hjkl"<CR>')
+vim.keymap.set('n', '<down>', '<cmd>echo "hjkl"<CR>')
+
+-- Remap ctrl + hjkl to navigate windows
+vim.keymap.set('n', '<C-h>', '<C-w>h', { noremap = true, silent = true, desc = 'Move to the [H]eft window' })
+vim.keymap.set('n', '<C-j>', '<C-w>j', { noremap = true, silent = true, desc = 'Move to the [D]own window' })
+vim.keymap.set('n', '<C-k>', '<C-w>k', { noremap = true, silent = true, desc = 'Move to the [U]p window' })
+vim.keymap.set('n', '<C-l>', '<C-w>l', { noremap = true, silent = true, desc = 'Move to the [R]ight window' })
 
 --
 -- Center the line vertically in the window
@@ -302,19 +306,19 @@ require('lazy').setup({
         end
 
         -- Navigation
-        map('n', ']c', function()
+        map('n', ']h', function()
           if vim.wo.diff then
-            return ']c'
+            return ']h'
           end
           vim.schedule(function()
             gs.next_hunk()
           end)
           return '<Ignore>'
-        end, { expr = true, desc = 'Gitsigns: Jump to next hunk' })
+        end, { expr = true, desc = 'Gitsigns: Jump to next [h]unk' })
 
-        map('n', '[c', function()
+        map('n', '[h', function()
           if vim.wo.diff then
-            return '[c'
+            return '[h'
           end
           vim.schedule(function()
             gs.prev_hunk()
@@ -387,16 +391,16 @@ require('lazy').setup({
       vim.keymap.set('n', '<C-g>', function()
         harpoon.ui:toggle_quick_menu(harpoon:list())
       end)
-      vim.keymap.set('n', '<C-h>', function()
+      vim.keymap.set('n', '<leader>1', function()
         harpoon:list():select(1)
       end, { desc = 'Select Harpoon List Idx 1' })
-      vim.keymap.set('n', '<C-j>', function()
+      vim.keymap.set('n', '<leader>2', function()
         harpoon:list():select(2)
       end, { desc = 'Select Harpoon List Idx 2' })
-      vim.keymap.set('n', '<C-k>', function()
+      vim.keymap.set('n', '<leader>3', function()
         harpoon:list():select(3)
       end, { desc = 'Select Harpoon List Idx 3' })
-      vim.keymap.set('n', '<C-l>', function()
+      vim.keymap.set('n', '<leader>4', function()
         harpoon:list():select(4)
       end, { desc = 'Select Harpoon List Idx 4' })
 
@@ -605,7 +609,7 @@ require('lazy').setup({
           -- online, please don't ask me how to install them :)
           ensure_installed = {
             -- Update this to ensure that you have the debuggers for the langs you want
-            'delve',
+            'python',
           },
         }
 
@@ -739,7 +743,7 @@ require('lazy').setup({
 
           -- Execute a code action, usually your cursor needs to be on top of an error
           -- or a suggestion from your LSP for this to activate.
-          map('<leader>ca', vim.lsp.buf.code_action, '[C]ode [A]ction')
+          map('<leader>ca', vim.lsp.buf.code_action, '[c]ode [A]ction')
 
           -- Opens a popup that displays documentation about the word under your cursor
           --  See `:help K` for why this keymap
@@ -797,6 +801,7 @@ require('lazy').setup({
         -- But for many setups, the LSP (`tsserver`) will work just fine
         tsserver = {},
         terraformls = {},
+        sqlls = {},
         --
 
         lua_ls = {
@@ -838,9 +843,6 @@ require('lazy').setup({
       -- You can add other tools here that you want Mason to install
       -- for you, so that they are available from within Neovim.
       local ensure_installed = vim.tbl_keys(servers or {})
-      vim.list_extend(ensure_installed, {
-        'stylua', -- Used to format lua code
-      })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
       require('mason-lspconfig').setup {
@@ -900,13 +902,13 @@ require('lazy').setup({
     opts = {
       notify_on_error = false,
       formatters_by_ft = {
-        lua = { 'stylua' },
         -- Conform can also run multiple formatters sequentially
         -- python = { "isort", "black" },
         --
         -- You can use a sub-list to tell conform to run *until* a formatter
         -- is found.
-        -- javascript = { { "prettierd", "prettier" } },
+        javascript = { { "prettierd", "prettier" } },
+        typescript = { { "prettierd", "prettier" } },
       },
     },
   },
@@ -1050,6 +1052,7 @@ require('lazy').setup({
       vim.cmd 'colorscheme rose-pine'
     end,
   },
+  { "catppuccin/nvim", name = "catppuccin", lazy=false, priority = 500 },
   -- Highlight todo, notes, etc in comments
   { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = false } },
 
@@ -1114,11 +1117,6 @@ require('lazy').setup({
       --    - Treesitter + textobjects: https://github.com/nvim-treesitter/nvim-treesitter-textobjects
     end,
   },
-  {
-    'nvim-treesitter/nvim-treesitter-context',
-    after = 'nvim-treesitter',
-  },
-
   -- The following two comments only work if you have downloaded the kickstart repo, not just copy pasted the
   -- init.lua. If you want these files, they are in the repository, so you can just download them and
   -- put them in the right spots if you want.
@@ -1158,6 +1156,8 @@ require('lazy').setup({
     },
   },
 })
+
+vim.cmd'colorscheme catppuccin-macchiato'
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
