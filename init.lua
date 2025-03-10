@@ -160,7 +160,15 @@ vim.opt.inccommand = 'split'
 vim.opt.cursorline = true
 
 -- Minimal number of screen lines to keep above and below the cursor.
-vim.opt.scrolloff = 10
+vim.opt.scrolloff = 8
+
+-- Map j to gj (move down by visual lines)
+vim.keymap.set('n', 'j', 'gj', { noremap = true, silent = true })
+vim.keymap.set('v', 'j', 'gj', { noremap = true, silent = true })
+
+-- Map k to gk (move up by visual lines)
+vim.keymap.set('n', 'k', 'gk', { noremap = true, silent = true })
+vim.keymap.set('v', 'k', 'gk', { noremap = true, silent = true })
 
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
@@ -200,7 +208,8 @@ vim.api.nvim_exec([[
   augroup END
 ]], false)
 
-vim.keymap.set('n', '<leader>t', '<cmd>:split term://$SHELL<CR><c-w>12-i', { desc = 'Open a new [T]erminal' })
+-- Removed in favour of tmux
+-- vim.keymap.set('n', '<leader>t', '<cmd>:split term://$SHELL<CR><c-w>12-i', { desc = 'Open a new [T]erminal' })
 
 vim.keymap.set('v', 'p', '"_dP', { noremap = true, silent = true, desc = '[P]ut without replacing the Put buffer' })
 -- TIP: Disable arrow keys in normal mode
@@ -224,10 +233,6 @@ end
 -- Map <C-d> and <C-u> to center the line
 vim.keymap.set('n', '<C-d>', '<C-d>zz', { noremap = true, silent = true, desc = 'Move [D]own half screen and center' })
 vim.keymap.set('n', '<C-u>', '<C-u>zz', { noremap = true, silent = true, desc = 'Move [U]p half screen and center' })
-
--- Navigate buffers
-vim.keymap.set('n', '<C-a', ':bp<CR>', { noremap = true, silent = true, desc = 'Go to previous buffer' })
-vim.keymap.set('n', '<C-s', ':bn<CR>', { noremap = true, silent = true, desc = 'Go to next buffer' })
 
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
@@ -368,7 +373,11 @@ require('lazy').setup({
         view = {
           side = 'right',
         },
-
+        actions = {
+          open_file = {
+            quit_on_open = true,
+          },
+        }
       }
       vim.keymap.set('n', '<leader>f', '<cmd>NvimTreeToggle<CR>', { desc = 'Toggle Nvim [F]ile Tree' })
     end,
@@ -385,7 +394,7 @@ require('lazy').setup({
       -- REQUIRED
 
       vim.keymap.set('n', '<leader>a', function()
-        harpoon:list():append()
+        harpoon:list():add()
       end, { desc = 'Add current file to Harpoon' })
       vim.keymap.set('n', '<C-g>', function()
         harpoon.ui:toggle_quick_menu(harpoon:list())
@@ -428,20 +437,30 @@ require('lazy').setup({
 
   { -- Useful plugin to show you pending keybinds.
     'folke/which-key.nvim',
-    event = 'VimEnter', -- Sets the loading event to 'VimEnter'
-    config = function() -- This is the function that runs, AFTER loading
-      require('which-key').setup()
+    event = 'VeryLazy', -- Sets the loading event to 'VimEnter'
+    opts = {
+      preset = "modern"
+    },
 
-      -- Document existing key chains
-      require('which-key').register {
-        ['<leader>c'] = { name = '[C]ode', _ = 'which_key_ignore' },
-        ['<leader>d'] = { name = '[D]ocument', _ = 'which_key_ignore' },
-        ['<leader>r'] = { name = '[R]ename', _ = 'which_key_ignore' },
-        ['<leader>s'] = { name = '[S]earch', _ = 'which_key_ignore' },
-        ['<leader>w'] = { name = '[W]orkspace', _ = 'which_key_ignore' },
-        ['<leader>h'] = { name = 'Git([H]ub)signs', _ = 'which_key_ignore' },
-      }
-    end,
+    -- Document existing key chains
+    keys = {
+      { "<leader>c", group = "[C]ode" },
+      { "<leader>c_", hidden = true },
+      { "<leader>d", group = "[D]ocument" },
+      { "<leader>d_", hidden = true },
+      { "<leader>h", group = "Git([H]ub)signs" },
+      { "<leader>h_", hidden = true },
+      { "<leader>r", group = "[R]ename" },
+      { "<leader>r_", hidden = true },
+      { "<leader>s", group = "[S]earch" },
+      { "<leader>s_", hidden = true },
+      { "<leader>t", group = "[T]oggle" },
+      { "<leader>t_", hidden = true },
+      { "<leader>w", group = "[W]orkspace" },
+      { "<leader>w_", hidden = true },
+      { "<leader>x", group = "Trouble" },
+      { "<leader>x_", hidden = true },
+    }
   },
 
   -- NOTE: Plugins can specify dependencies.
@@ -522,7 +541,7 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
       vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
       vim.keymap.set('n', '<leader>sf', function()
-        builtin.find_files { find_command = { 'rg', '--files', '--iglob', '!.git', '--hidden' } }
+        builtin.find_files { find_command = { 'rg', '--files', '--ignore-file', '~/.config/ripgrep/.rgignore', '--iglob', '!.git', '--iglob', '!venv','--iglob', '!node_modules'} }
       end, { desc = '[S]earch [F]iles' })
       vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
       vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
@@ -576,23 +595,94 @@ require('lazy').setup({
       { "<c-\\>", "<cmd><C-U>TmuxNavigatePrevious<cr>" },
     },
   },
-  { 'github/copilot.vim' },
-  {
-    'CopilotC-Nvim/CopilotChat.nvim',
-    branch = 'canary',
-    opts = {
-      debug = true, -- Enable debugging
-      -- See Configuration section for rest
-    },
-    config = function()
-      require('CopilotChat').setup {
-        -- Your configuration goes here
-      }
-      vim.cmd [[command Explain CopilotChatExplain]]
-      vim.cmd [[command Chat CopilotChat]]
-    end,
-    -- See Commands section for default commands if you want to lazy load on them
-  },
+  -- {
+  --   "yetone/avante.nvim",
+  --   event = "VeryLazy",
+  --   lazy = false,
+  --   opts = {
+  --     -- add any opts here
+  --   },
+  --   -- if you want to download pre-built binary, then pass source=false. Make sure to follow instruction above.
+  --   -- Also note that downloading prebuilt binary is a lot faster comparing to compiling from source.
+  --   build = ":AvanteBuild source=false",
+  --   dependencies = {
+  --     "stevearc/dressing.nvim",
+  --     "nvim-lua/plenary.nvim",
+  --     "MunifTanjim/nui.nvim",
+  --     --- The below dependencies are optional,
+  --     "nvim-tree/nvim-web-devicons", -- or echasnovski/mini.icons
+  --     "zbirenbaum/copilot.lua", -- for providers='copilot'
+  --     {
+  --       -- support for image pasting
+  --       "HakonHarnes/img-clip.nvim",
+  --       event = "VeryLazy",
+  --       opts = {
+  --         -- recommended settings
+  --         default = {
+  --           embed_image_as_base64 = false,
+  --           prompt_for_file_name = false,
+  --           drag_and_drop = {
+  --             insert_mode = true,
+  --           },
+  --         },
+  --       },
+  --     },
+  --     {
+  --       -- Make sure to setup it properly if you have lazy=true
+  --       'MeanderingProgrammer/render-markdown.nvim',
+  --       opts = {
+  --         file_types = { "markdown", "Avante" },
+  --       },
+  --       ft = { "markdown", "Avante" },
+  --     },
+  --   },
+  -- },
+  -- {
+  --   "olimorris/codecompanion.nvim",
+  --   dependencies = {
+  --     "nvim-lua/plenary.nvim",
+  --     "nvim-treesitter/nvim-treesitter",
+  --     "hrsh7th/nvim-cmp", -- Optional: For using slash commands and variables in the chat buffer
+  --     "nvim-telescope/telescope.nvim", -- Optional: For using slash commands
+  --     { "MeanderingProgrammer/render-markdown.nvim", ft = { "markdown", "codecompanion" } }, -- Optional: For prettier markdown rendering
+  --     { "stevearc/dressing.nvim", opts = {} }, -- Optional: Improves `vim.ui.select`
+  --     { 'github/copilot.vim' },
+  --   },
+  --   config = function ()
+  --     require("codecompanion").setup{
+  --       strategies = {
+  --         chat = {
+  --           adapter = "anthropic",
+  --         },
+  --         inline = {
+  --           adapter = "anthropic",
+  --         },
+  --       },
+  --       opts={
+  --         log_level = "trace",
+  --       }
+  --     }
+  --     -- Keymap to open actions with <leader>ti
+  --     vim.keymap.set('n', '<leader>ta', '<cmd>CodeCompanionActions<CR>', { noremap = true, silent = true, desc = '[T]oggle CodeCompanion [A]I Actions' })
+  --     return true
+  --   end
+  -- },
+  -- {
+  --   'CopilotC-Nvim/CopilotChat.nvim',
+  --   branch = 'canary',
+  --   opts = {
+  --     debug = true, -- Enable debugging
+  --     -- See Configuration section for rest
+  --   },
+  --   config = function()
+  --     require('CopilotChat').setup {
+  --       -- Your configuration goes here
+  --     }
+  --     vim.cmd [[command Explain CopilotChatExplain]]
+  --     vim.cmd [[command Chat CopilotChat]]
+  --   end,
+  --   -- See Commands section for default commands if you want to lazy load on them
+  -- },
   {
     'mfussenegger/nvim-jdtls',
     dependencies = {
@@ -607,6 +697,7 @@ require('lazy').setup({
 
         -- Add your own debuggers here
         'leoluz/nvim-dap-go',
+        'mfussenegger/nvim-dap-python',
       },
       config = function()
         local dap = require 'dap'
@@ -616,7 +707,7 @@ require('lazy').setup({
           -- Makes a best effort to setup the various debuggers with
           -- reasonable debug configurations
           automatic_setup = true,
-
+          automatic_installation = true,
           -- You can provide additional configuration to the handlers,
           -- see mason-nvim-dap README for more information
           handlers = {},
@@ -670,6 +761,7 @@ require('lazy').setup({
 
         -- Install golang specific config
         require('dap-go').setup()
+        require('dap-python').setup('venv/bin/python')
       end,
     },
   },
@@ -680,7 +772,7 @@ require('lazy').setup({
       'williamboman/mason.nvim',
       'williamboman/mason-lspconfig.nvim',
       'WhoIsSethDaniel/mason-tool-installer.nvim',
-
+      'folke/trouble.nvim',
       -- Useful status updates for LSP.
       -- NOTE: `opts = {}` is the same as calling `require('fidget').setup({})`
       { 'j-hui/fidget.nvim', opts = {} },
@@ -761,7 +853,7 @@ require('lazy').setup({
           -- or a suggestion from your LSP for this to activate.
           map('<leader>ca', vim.lsp.buf.code_action, '[c]ode [A]ction')
 
-          map('<leader>i', function() vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled()) end, 'Toggele [i]nlay hints');
+          map('<leader>ti', function() vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled()) end, '[I]nlay hints');
 
           -- Opens a popup that displays documentation about the word under your cursor
           --  See `:help K` for why this keymap
@@ -809,15 +901,43 @@ require('lazy').setup({
       local servers = {
         -- clangd = {},
         -- gopls = {},
-        pyright = {},
+        pyright = {
+          settings = {
+            python = {
+              analysis = {
+                autoSearchPaths = true,
+                useLibraryCodeForTypes = true,
+                venvPath = ".",
+                venv = "venv",
+              },
+            },
+          },
+          before_init = function(_, config)
+            local Path = require("plenary.path")
+            local root = config.root_dir
+            local found_pyrightconfig = false
+        
+            while root and root ~= "/" do
+              local pyrightconfig = Path:new(root .. "/pyrightconfig.json")
+              if pyrightconfig:exists() then
+                found_pyrightconfig = true
+                break
+              end
+              root = Path:new(root):parent():absolute()
+            end
+        
+            if not found_pyrightconfig then
+              config.settings.python.analysis.venvPath = "."
+              config.settings.python.analysis.venv = "venv"
+            end
+          end,
+        },
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
         -- Some languages (like typescript) have entire language plugins that can be useful:
         --    https://github.com/pmizio/typescript-tools.nvim
         --
-        -- But for many setups, the LSP (`tsserver`) will work just fine
-        tsserver = {},
         terraformls = {},
         sqlls = {},
         --
@@ -876,6 +996,10 @@ require('lazy').setup({
         },
       }
     end,
+  }, {
+    "pmizio/typescript-tools.nvim",
+    dependencies = { "nvim-lua/plenary.nvim", "neovim/nvim-lspconfig" },
+    opts = {},
   },
   {
     "lewis6991/hover.nvim",
@@ -912,7 +1036,7 @@ require('lazy').setup({
   {
     'mbbill/undotree',
     config = function()
-      vim.keymap.set('n', '<leader>u', vim.cmd.UndotreeToggle, { desc = 'Toggle [U]ndo Tree' })
+      vim.keymap.set('n', '<leader>tu', vim.cmd.UndotreeToggle, { desc = '[U]ndo Tree' })
     end,
   },
   { -- Autoformat
@@ -925,8 +1049,9 @@ require('lazy').setup({
         --
         -- You can use a sub-list to tell conform to run *until* a formatter
         -- is found.
-        javascript = { { "prettierd", "prettier" } },
-        typescript = { { "prettierd", "prettier" } },
+        javascript = { { "prettier" } },
+        typescript = { { "prettier" } },
+        typescriptreact = { { "prettier" } },
       },
     },
   },
@@ -1053,6 +1178,67 @@ require('lazy').setup({
   --   end,
   -- },
   {
+    "folke/trouble.nvim",
+    opts = {}, -- for default options, refer to the configuration section for custom setup.
+    cmd = "Trouble",
+    keys = {
+      {
+        "<leader>xx",
+        "<cmd>Trouble diagnostics toggle<cr>",
+        desc = "Diagnostics (Trouble)",
+      },
+      {
+        "<leader>xX",
+        "<cmd>Trouble diagnostics toggle filter.buf=0<cr>",
+        desc = "Buffer Diagnostics (Trouble)",
+      },
+      {
+        "<leader>xs",
+        "<cmd>Trouble symbols toggle focus=false<cr>",
+        desc = "Symbols (Trouble)",
+      },
+      {
+        "<leader>xl",
+        "<cmd>Trouble lsp toggle focus=false win.position=right win.columns=50<cr>",
+        desc = "LSP Definitions / references / ... (Trouble)",
+      },
+      {
+        "<leader>tl",
+        "<cmd>Trouble lsp toggle focus=false win.position=right win.columns=50<cr>",
+        desc = "[L]SP Definitions / references / ... (Trouble)",
+      },
+      {
+        "<leader>xL",
+        "<cmd>Trouble loclist toggle<cr>",
+        desc = "Location List (Trouble)",
+      },
+      {
+        "<leader>xQ",
+        "<cmd>Trouble qflist toggle<cr>",
+        desc = "Quickfix List (Trouble)",
+      },
+    },
+    config = function()
+      require("trouble").setup {
+        open_no_results = true,
+      }
+    end,
+  },
+  {
+    "neanias/everforest-nvim",
+    version = false,
+    lazy = false,
+    priority = 1100, -- make sure to load this before all the other start plugins
+    -- Optional; default configuration will be used if setup isn't called.
+    config = function()
+      require("everforest").setup({
+        -- Your config here
+        background = "hard",
+        italic_comments = true,
+      })
+    end,
+  },
+  {
     'rose-pine/neovim',
     lazy = false,
     priority = 1000,
@@ -1153,7 +1339,37 @@ require('lazy').setup({
   --
   --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
   --    For additional information, see `:help lazy.nvim-lazy.nvim-structuring-your-plugins`
-  -- { import = 'custom.plugins' },
+  {
+    "tris203/precognition.nvim",
+    config = function () 
+      require("precognition").setup {
+        startVisible = false,
+        -- showBlankVirtLine = true,
+        -- hints = {
+        --      Caret = { text = "^", prio = 2 },
+        --      Dollar = { text = "$", prio = 1 },
+        --      MatchingPair = { text = "%", prio = 5 },
+        --      Zero = { text = "0", prio = 1 },
+        --      w = { text = "w", prio = 10 },
+        --      b = { text = "b", prio = 9 },
+        --      e = { text = "e", prio = 8 },
+        --      W = { text = "W", prio = 7 },
+        --      B = { text = "B", prio = 6 },
+        --      E = { text = "E", prio = 5 },
+        -- },
+        -- gutterHints = {
+        --     -- prio is not currently used for gutter hints
+        --     G = { text = "G", prio = 1 },
+        --     gg = { text = "gg", prio = 1 },
+        --     PrevParagraph = { text = "{", prio = 1 },
+        --     NextParagraph = { text = "}", prio = 1 },
+        -- },
+      }
+      vim.keymap.set( 'n', '<leader>tp', require('precognition').toggle, { desc = '[P]recognition' })
+    end
+  },
+  { "sitiom/nvim-numbertoggle" },
+  { import = 'custom.plugins' },
 }, {
   ui = {
     -- If you have a Nerd Font, set icons to an empty table which will use the
@@ -1176,7 +1392,11 @@ require('lazy').setup({
   },
 })
 
-vim.cmd'colorscheme catppuccin-macchiato'
+-- vim.cmd'colorscheme catppuccin-macchiato'
+-- vim.cmd'colorscheme catppuccin-latte'
+vim.cmd'colorscheme rose-pine'
+-- vim.cmd'colorscheme everforest'
+-- vim.cmd'colorscheme rose-pine-dawn'
 -- vim.o.background = "light"
 -- vim.cmd'colorscheme gruvbox'
 
