@@ -541,7 +541,7 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
       vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
       vim.keymap.set('n', '<leader>sf', function()
-        builtin.find_files { find_command = { 'rg', '--files', '--ignore-file', '~/.config/ripgrep/.rgignore', '--iglob', '!.git', '--iglob', '!venv','--iglob', '!node_modules'} }
+        builtin.find_files { find_command = { 'rg', '--files', '--ignore-file', '~/.config/ripgrep/.rgignore', '--iglob', '!.git', '--iglob', '!venv','--iglob', '!node_modules', '--iglob', '!.DS_Store', '--iglob', '!.gitignore', '--iglob', '!.gitattributes', '--iglob', '!.dockerignore' } }
       end, { desc = '[S]earch [F]iles' })
       vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
       vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
@@ -1366,6 +1366,17 @@ require('lazy').setup({
         -- },
       }
       vim.keymap.set( 'n', '<leader>tp', require('precognition').toggle, { desc = '[P]recognition' })
+    end
+  },
+  {
+    "greggh/claude-code.nvim",
+    dependencies = {
+      "nvim-lua/plenary.nvim", -- Required for git operations
+    },
+    config = function()
+      require("claude-code").setup()
+      -- Or map to a key:
+      vim.keymap.set('n', '<leader>tc', '<cmd>ClaudeCode<CR>', { desc = '[T]oggle [C]laude Code' })
     end
   },
   { "sitiom/nvim-numbertoggle" },
